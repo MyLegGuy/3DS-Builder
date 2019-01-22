@@ -70,9 +70,8 @@ namespace _3DS_Builder
         {
             if (threads > 0) { Alert("Please wait for all operations to finish first."); return; }
 
-            SaveFileDialog sfd = new SaveFileDialog();
-            if (sfd.ShowDialog() == DialogResult.OK)
-                TB_SavePath.Text = sfd.FileName;
+
+                TB_SavePath.Text = "/gooddrive/_temp/puyo/out";
 
             Validate_Go();
         }
@@ -91,7 +90,7 @@ namespace _3DS_Builder
             {
                 threads++;
                 SetPrebuiltBoxes(false);
-                CTR_ROM.buildROM(Card2, LOGO_NAME, EXEFS_PATH, ROMFS_PATH, EXHEADER_PATH, SERIAL_TEXT, SAVE_PATH, PB_Show, RTB_Progress);
+                CTR_ROM.buildROM(Card2, LOGO_NAME, EXEFS_PATH, ROMFS_PATH, EXHEADER_PATH, SERIAL_TEXT, SAVE_PATH);
                 SetPrebuiltBoxes(true);
                 threads--;
             }).Start();
@@ -134,10 +133,8 @@ namespace _3DS_Builder
             }
             else
             {
-                FolderBrowserDialog fbd = new FolderBrowserDialog();
-                if (fbd.ShowDialog() != DialogResult.OK) return;
 
-                TB_Romfs.Text = fbd.SelectedPath;
+                TB_Romfs.Text = "/gooddrive/_temp/puyo/romfs";
                 Validate_Go();
             }
         }
@@ -146,22 +143,20 @@ namespace _3DS_Builder
             if (threads > 0) { Alert("Please wait for all operations to finish first."); return; }
             if (CHK_PrebuiltExefs.Checked)
             {
-                OpenFileDialog ofd = new OpenFileDialog();
-                if (ofd.ShowDialog() != DialogResult.OK) return;
+               //OpenFileDialog ofd = new OpenFileDialog();
+               //if (ofd.ShowDialog() != DialogResult.OK) return;
 
-                TB_Exefs.Text = ofd.FileName;
+                TB_Exefs.Text = " /gooddrive/_temp/puyo/exefs.bin";
                 Validate_Go();
             }
             else
             {
 
-                FolderBrowserDialog fbd = new FolderBrowserDialog();
-                if (fbd.ShowDialog() != DialogResult.OK) return;
 
-                string[] files = (new DirectoryInfo(fbd.SelectedPath)).GetFiles().Select(f => Path.GetFileNameWithoutExtension(f.FullName)).ToArray();
+                string[] files = (new DirectoryInfo("/gooddrive/_temp/puyo/exefs")).GetFiles().Select(f => Path.GetFileNameWithoutExtension(f.FullName)).ToArray();
                 if (((files.Contains("code") || files.Contains(".code")) && !(files.Contains(".code") && files.Contains("code"))) && files.Contains("banner") && files.Contains("icon") && files.Length < 10)
                 {
-                    FileInfo fi = (new DirectoryInfo(fbd.SelectedPath)).GetFiles()[Math.Max(Array.IndexOf(files, "code"), Array.IndexOf(files, ".code"))];
+                    FileInfo fi = (new DirectoryInfo("/gooddrive/_temp/puyo/exefs/")).GetFiles()[Math.Max(Array.IndexOf(files, "code"), Array.IndexOf(files, ".code"))];
                     if (fi.Name == "code.bin")
                     {
                         Alert("Renaming \"code.bin\" to \".code.bin\"");
@@ -179,9 +174,9 @@ namespace _3DS_Builder
                     if (files.Contains("logo"))
                     {
                         Alert("Deleting unneeded exefs logo binary.");
-                        File.Delete((new DirectoryInfo(fbd.SelectedPath)).GetFiles()[Array.IndexOf(files, "logo")].FullName);
+                        File.Delete((new DirectoryInfo("/gooddrive/_temp/puyo/exefs")).GetFiles()[Array.IndexOf(files, "logo")].FullName);
                     }
-                    TB_Exefs.Text = fbd.SelectedPath;
+                    TB_Exefs.Text = "/gooddrive/_temp/puyo/exefs";
                     Validate_Go();
                 }
                 else
@@ -195,23 +190,20 @@ namespace _3DS_Builder
 
             if (threads > 0) { Alert("Please wait for all operations to finish first."); return; }
 
-            OpenFileDialog ofd = new OpenFileDialog();
-            if (ofd.ShowDialog() == DialogResult.OK)
-            {
-                FileInfo fi = new FileInfo(ofd.FileName);
+                FileInfo fi = new FileInfo("/gooddrive/_temp/puyo/exheader.bin");
                 if (fi.Length < 0x800)
                 {
                     Alert("Selected Exheader is too short. Correct size is 0x800 for Exheader and AccessDescriptor.");
                     return;
                 }
-                TB_Exheader.Text = ofd.FileName;
+                TB_Exheader.Text = "/gooddrive/_temp/puyo/exheader.bin";
                 Exheader exh = new Exheader(TB_Exheader.Text);
                 if (RecognizedGames.ContainsKey(exh.TitleID))
                 {
                     if (Prompt(MessageBoxButtons.YesNo, "Detected " + RecognizedGames[exh.TitleID][1] + ". Load Defaults?") == DialogResult.Yes)
                         TB_Serial.Text = exh.GetSerial();
                 }
-            }
+            
             Validate_Go();
         }
 

@@ -16,35 +16,32 @@ namespace CTR
         // Main wrapper that assembles the ROM based on the following specifications:
         internal static bool buildROM(bool Card2, string LOGO_NAME,
             string EXEFS_PATH, string ROMFS_PATH, string EXHEADER_PATH,
-            string SERIAL_TEXT, string SAVE_PATH,
-            ProgressBar PB_Show = null, RichTextBox TB_Progress = null)
+            string SERIAL_TEXT, string SAVE_PATH
+)
         {
-            PB_Show = PB_Show ?? new ProgressBar();
-            TB_Progress = TB_Progress ?? new RichTextBox();
+
 
             // Sanity check the input files.
             if (!((File.Exists(EXEFS_PATH) || Directory.Exists(EXEFS_PATH)) && (File.Exists(ROMFS_PATH) || Directory.Exists(ROMFS_PATH)) && File.Exists(EXHEADER_PATH))) return false;
 
-            var NCCH = setNCCH(EXEFS_PATH, ROMFS_PATH, EXHEADER_PATH, SERIAL_TEXT, LOGO_NAME, PB_Show, TB_Progress);
-            var NCSD = setNCSD(NCCH, Card2, PB_Show, TB_Progress);
-            bool success = writeROM(NCSD, SAVE_PATH, PB_Show, TB_Progress);
+            var NCCH = setNCCH(EXEFS_PATH, ROMFS_PATH, EXHEADER_PATH, SERIAL_TEXT, LOGO_NAME);
+            var NCSD = setNCSD(NCCH, Card2);
+            bool success = writeROM(NCSD, SAVE_PATH);
             return success;
         }
 
         // Sub methods that drive the operation
-        internal static NCCH setNCCH(string EXEFS_PATH, string ROMFS_PATH, string EXHEADER_PATH, string TB_Serial, string LOGO_NAME,
-            ProgressBar PB_Show = null, RichTextBox TB_Progress = null)
+        internal static NCCH setNCCH(string EXEFS_PATH, string ROMFS_PATH, string EXHEADER_PATH, string TB_Serial, string LOGO_NAME)
         {
-            PB_Show = PB_Show ?? new ProgressBar();
-            TB_Progress = TB_Progress ?? new RichTextBox();
+ 
             SHA256Managed sha = new SHA256Managed();
             NCCH Content = new NCCH();
-            updateTB(TB_Progress, "Adding Exheader...");
+            Console.WriteLine( "Adding Exheader...");
             Content.exheader = new Exheader(EXHEADER_PATH);
             Content.plainregion = new byte[0]; //No plain region by default.
             if (Content.exheader.isPokemon())
             {
-                updateTB(TB_Progress, "Detected Pokemon Game. Adding Plain Region...");
+                Console.WriteLine( "Detected Pokemon Game. Adding Plain Region...");
                 if (Content.exheader.isXY())
                 {
                     Content.plainregion = (byte[])Resources.ResourceManager.GetObject("XY");
@@ -54,14 +51,14 @@ namespace CTR
                     Content.plainregion = (byte[])Resources.ResourceManager.GetObject("ORAS");
                 }
             }
-            updateTB(TB_Progress, "Adding ExeFS...");
+            Console.WriteLine("Adding ExeFS...");
             Content.exefs = new ExeFS(EXEFS_PATH);
-            updateTB(TB_Progress, "Adding RomFS...");
-            Content.romfs = new RomFS(ROMFS_PATH, PB_Show, TB_Progress);
+            Console.WriteLine("Adding RomFS...");
+            Content.romfs = new RomFS(ROMFS_PATH);
 
-            updateTB(TB_Progress, "Adding Logo...");
+            Console.WriteLine( "Adding Logo...");
             Content.logo = (byte[])Resources.ResourceManager.GetObject(LOGO_NAME);
-            updateTB(TB_Progress, "Building NCCH Header...");
+            Console.WriteLine( "Building NCCH Header...");
             ulong Len = 0x200; //NCCH Signature + NCCH Header
             Content.header = new NCCH.Header { Signature = new byte[0x100], Magic = 0x4843434E };
             Content.header.TitleId = Content.header.ProgramId = Content.exheader.TitleID;
@@ -103,14 +100,13 @@ namespace CTR
 
             return Content;
         }
-        internal static NCSD setNCSD(NCCH Content, bool Card2,
-            ProgressBar PB_Show = null, RichTextBox TB_Progress = null)
+        internal static NCSD setNCSD(NCCH Content, bool Card2
+)
         {
-            PB_Show = PB_Show ?? new ProgressBar();
-            TB_Progress = TB_Progress ?? new RichTextBox();
+
             NCSD Rom = new NCSD { NCCH_Array = new List<NCCH>() };
             Rom.NCCH_Array.Add(Content);
-            updateTB(TB_Progress, "Building NCSD Header...");
+            Console.WriteLine( "Building NCSD Header...");
             Rom.Card2 = Card2;
             Rom.header = new NCSD.Header { Signature = new byte[0x100], Magic = 0x4453434E };
             ulong Length = 0x80 * 0x100000; // 128 MB
@@ -182,17 +178,16 @@ namespace CTR
             //NCSD is Initialized
             return Rom;
         }
-        internal static bool writeROM(NCSD Rom, string SAVE_PATH,
-            ProgressBar PB_Show = null, RichTextBox TB_Progress = null)
+        internal static bool writeROM(NCSD Rom, string SAVE_PATH
+    )
         {
             NCCH Content = Rom.NCCH_Array[0];
-            PB_Show = PB_Show ?? new ProgressBar();
-            TB_Progress = TB_Progress ?? new RichTextBox();
+ 
             using (FileStream OutFileStream = new FileStream(SAVE_PATH, FileMode.Create))
             {
-                updateTB(TB_Progress, "Writing NCSD Header...");
+                Console.WriteLine( "Writing NCSD Header...");
                 OutFileStream.Write(Rom.Data, 0, Rom.Data.Length);
-                updateTB(TB_Progress, "Writing NCCH...");
+                Console.WriteLine( "Writing NCCH...");
                 OutFileStream.Write(Rom.NCCH_Array[0].header.Data, 0, Rom.NCCH_Array[0].header.Data.Length); //Write NCCH header
                 //AES time.
                 byte[] key = new byte[0x10]; //Fixed-Crypto key is all zero.
@@ -202,7 +197,7 @@ namespace CTR
                     switch (i)
                     {
                         case 0: //Exheader + AccessDesc
-                            updateTB(TB_Progress, "Writing Exheader...");
+                            Console.WriteLine( "Writing Exheader...");
                             byte[] inEncExheader = new byte[Rom.NCCH_Array[0].exheader.Data.Length + Rom.NCCH_Array[0].exheader.AccessDescriptor.Length];
                             byte[] outEncExheader = new byte[Rom.NCCH_Array[0].exheader.Data.Length + Rom.NCCH_Array[0].exheader.AccessDescriptor.Length];
                             Array.Copy(Rom.NCCH_Array[0].exheader.Data, inEncExheader, Rom.NCCH_Array[0].exheader.Data.Length);
@@ -211,26 +206,20 @@ namespace CTR
                             OutFileStream.Write(outEncExheader, 0, outEncExheader.Length); // Write Exheader
                             break;
                         case 1: //Exefs
-                            updateTB(TB_Progress, "Writing Exefs...");
+                            Console.WriteLine( "Writing Exefs...");
                             OutFileStream.Seek(0x4000 + Rom.NCCH_Array[0].header.ExefsOffset * MEDIA_UNIT_SIZE, SeekOrigin.Begin);
                             byte[] OutExefs = new byte[Rom.NCCH_Array[0].exefs.Data.Length];
                             aesctr.TransformBlock(Rom.NCCH_Array[0].exefs.Data, 0, Rom.NCCH_Array[0].exefs.Data.Length, OutExefs, 0);
                             OutFileStream.Write(OutExefs, 0, OutExefs.Length);
                             break;
                         case 2: //Romfs
-                            updateTB(TB_Progress, "Writing Romfs...");
+                            Console.WriteLine( "Writing Romfs...");
                             OutFileStream.Seek(0x4000 + Rom.NCCH_Array[0].header.RomfsOffset * MEDIA_UNIT_SIZE, SeekOrigin.Begin);
                             using (FileStream InFileStream = new FileStream(Rom.NCCH_Array[0].romfs.FileName, FileMode.Open, FileAccess.Read))
                             {
                                 uint BUFFER_SIZE = 0;
                                 ulong RomfsLen = Rom.NCCH_Array[0].header.RomfsSize * MEDIA_UNIT_SIZE;
-                                PB_Show.Invoke((Action)(() =>
-                                {
-                                    PB_Show.Minimum = 0;
-                                    PB_Show.Maximum = (int)(RomfsLen / 0x400000);
-                                    PB_Show.Value = 0;
-                                    PB_Show.Step = 1;
-                                }));
+
                                 for (ulong j = 0; j < (RomfsLen); j += BUFFER_SIZE)
                                 {
                                     BUFFER_SIZE = (RomfsLen - j) > 0x400000 ? 0x400000 : (uint)(RomfsLen - j);
@@ -239,18 +228,18 @@ namespace CTR
                                     InFileStream.Read(buf, 0, (int)BUFFER_SIZE);
                                     aesctr.TransformBlock(buf, 0, (int)BUFFER_SIZE, outbuf, 0);
                                     OutFileStream.Write(outbuf, 0, (int)BUFFER_SIZE);
-                                    PB_Show.Invoke((Action)(PB_Show.PerformStep));
+
                                 }
                             }
                             break;
                     }
                 }
-                updateTB(TB_Progress, "Writing Logo...");
+                Console.WriteLine( "Writing Logo...");
                 OutFileStream.Seek(0x4000 + Rom.NCCH_Array[0].header.LogoOffset * MEDIA_UNIT_SIZE, SeekOrigin.Begin);
                 OutFileStream.Write(Rom.NCCH_Array[0].logo, 0, Rom.NCCH_Array[0].logo.Length);
                 if (Rom.NCCH_Array[0].plainregion.Length > 0)
                 {
-                    updateTB(TB_Progress, "Writing Plain Region...");
+                    Console.WriteLine( "Writing Plain Region...");
                     OutFileStream.Seek(0x4000 + Rom.NCCH_Array[0].header.PlainRegionOffset * MEDIA_UNIT_SIZE, SeekOrigin.Begin);
                     OutFileStream.Write(Rom.NCCH_Array[0].plainregion, 0, Rom.NCCH_Array[0].plainregion.Length);
                 }
@@ -259,7 +248,7 @@ namespace CTR
                 OutFileStream.Seek(Rom.header.OffsetSizeTable[Rom.NCCH_Array.Count - 1].Offset * MEDIA_UNIT_SIZE + Rom.header.OffsetSizeTable[Rom.NCCH_Array.Count - 1].Size * MEDIA_UNIT_SIZE, SeekOrigin.Begin);
                 ulong TotalLen = Rom.header.MediaSize * MEDIA_UNIT_SIZE;
                 byte[] Buffer = Enumerable.Repeat((byte)0xFF, 0x400000).ToArray();
-                updateTB(TB_Progress, "Writing NCSD Padding...");
+                Console.WriteLine( "Writing NCSD Padding...");
                 while ((ulong)OutFileStream.Position < TotalLen)
                 {
                     int BUFFER_LEN = ((TotalLen - (ulong)OutFileStream.Position) < 0x400000) ? (int)(TotalLen - (ulong)OutFileStream.Position) : 0x400000;
@@ -271,7 +260,7 @@ namespace CTR
             if (Content.romfs.isTempFile)
                 File.Delete(Content.romfs.FileName);
 
-            updateTB(TB_Progress, "Done!");
+            Console.WriteLine( "Done!");
             return true;
         }
 
@@ -313,7 +302,7 @@ namespace CTR
             Exheader exh = new Exheader(exeheader);
             return !exh.isPokemon() || Card2;
         }
-        internal static void updateTB(RichTextBox RTB, string progress)
+        /*internal static void Console.WriteLine( string progress)
         {
             try
             {
@@ -332,7 +321,7 @@ namespace CTR
                 }
             }
             catch { }
-        }
+        }*/
         internal static ulong Align(ulong input, ulong alignsize)
         {
             ulong output = input;

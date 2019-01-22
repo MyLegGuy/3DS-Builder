@@ -207,6 +207,7 @@
             this.CHK_PrebuiltExefs.Text = "Use Pre-Built Exefs";
             this.CHK_PrebuiltExefs.UseVisualStyleBackColor = true;
             this.CHK_PrebuiltExefs.CheckedChanged += new System.EventHandler(this.CHK_PrebuiltExefs_CheckedChanged);
+            this.CHK_PrebuiltExefs.Checked=true;
             // 
             // RTB_Progress
             // 
