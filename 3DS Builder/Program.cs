@@ -15,6 +15,22 @@ namespace _3DS_Builder
 {
     static class Program
     {
+
+        static string makePathAbsolute(string _passedFilename){
+            if (!Path.IsPathRooted(_passedFilename)){
+                return Path.GetFullPath(_passedFilename);
+            }else{
+                return _passedFilename;
+            }
+        }
+        static string removeEndSlash(string _passedDirectory){
+            if (_passedDirectory[_passedDirectory.Length-1]==Path.DirectorySeparatorChar || _passedDirectory[_passedDirectory.Length-1]==Path.AltDirectorySeparatorChar){
+                return _passedDirectory.Substring(0,_passedDirectory.Length-1);
+            }else{
+                return _passedDirectory;
+            }
+        }
+
         /// <summary>
         /// The main entry point for the application.
         /// </summary>
@@ -25,7 +41,7 @@ namespace _3DS_Builder
         		Console.WriteLine("3dsbuilder <exefs precompiled> <romfsdir> <exheader> <out file>");
         	}else{
         		//CTR_ROM.buildROM(true, "Nintendo", "/gooddrive/_temp/puyo/exefs.bin", "/gooddrive/_temp/puyo/romfs", "/gooddrive/_temp/puyo/exheader.bin", "CTR-P-XXXX", "/gooddrive/_temp/puyo/outrom");
-        	    CTR_ROM.buildROM(true, "Nintendo", args[0], args[1], args[2], "CTR-P-XXXX", args[3]);
+        	    CTR_ROM.buildROM(true, "Nintendo", makePathAbsolute(args[0]), removeEndSlash(makePathAbsolute(args[1])), makePathAbsolute(args[2]), "CTR-P-XXXX", makePathAbsolute(args[3]));
         	}
         }
     }
