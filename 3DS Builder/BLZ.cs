@@ -20,7 +20,6 @@
 
 using System;
 using System.IO;
-using System.Windows.Forms;
 
 namespace blz
 {
@@ -50,24 +49,10 @@ namespace blz
         {
             Console.Write(text);
         }
-        private ProgressBar pBar1;
-        private void initpBar(int max)
-        {
-            if (pBar1.InvokeRequired)
-                pBar1.Invoke((MethodInvoker)delegate { pBar1.Minimum = 0; pBar1.Step = 1; pBar1.Value = 0; pBar1.Maximum = max; });
-            else { pBar1.Minimum = 0; pBar1.Step = 1; pBar1.Value = 0; pBar1.Maximum = max; }
-        }
-        private void setpBarPos(int pos)
-        {
-            if (pBar1.InvokeRequired)
-                pBar1.Invoke((MethodInvoker)delegate { pBar1.Value = pos; });
-            else { pBar1.Value = pos; }
-        }
-        public BLZCoder(string[] args, ProgressBar pBar = null)
+
+        public BLZCoder(string[] args)
         {
             int cmd, mode = 0, arg;
-            if (pBar == null) pBar1 = new ProgressBar();
-            pBar1 = pBar;
 
             // Title();
 
@@ -335,10 +320,8 @@ namespace blz
             raw_end = raw_new;
 
             mask = 0;
-            initpBar(raw_end);
             while (raw < raw_end)
             {
-                setpBarPos(raw);
                 if ((mask = (int)((uint)mask >> BLZ_SHIFT)) == 0)
                 {
                     pak_buffer[(flg = pak++)] = 0;

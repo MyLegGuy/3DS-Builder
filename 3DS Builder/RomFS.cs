@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
-using System.Windows.Forms;
 
 namespace CTR
 {
@@ -15,10 +14,8 @@ namespace CTR
         public byte[] SuperBlockHash;
         public uint SuperBlockLen;
 
-        public RomFS(string fn, ProgressBar PB = null, RichTextBox RTB = null)
+        public RomFS(string fn)
         {
-            PB = PB ?? new ProgressBar();
-            RTB = RTB ?? new RichTextBox();
             const uint MEDIA_UNIT_SIZE = 0x200;
             if (File.Exists(fn))
             {
@@ -44,7 +41,7 @@ namespace CTR
             {
                 FileName = TempFile;
                 isTempFile = true;
-                BuildRomFS(FileName, fn, RTB, PB);
+                BuildRomFS(FileName, fn);
                 using (var fs = File.OpenRead(FileName))
                 {
                     fs.Seek(0x8, SeekOrigin.Begin);
@@ -70,27 +67,11 @@ namespace CTR
         internal static string OutFile;
         internal const uint ROMFS_UNUSED_ENTRY = 0xFFFFFFFF;
 
-        internal static void updateTB(RichTextBox RTB, string progress)
+        internal static void updateTB(string progress)
         {
-            try
-            {
-                if (RTB.InvokeRequired)
-                    RTB.Invoke((MethodInvoker)delegate
-                    {
-                        RTB.AppendText(Environment.NewLine + progress);
-                        RTB.SelectionStart = RTB.Text.Length;
-                        RTB.ScrollToCaret();
-                    });
-                else
-                {
-                    RTB.SelectionStart = RTB.Text.Length;
-                    RTB.ScrollToCaret();
-                    RTB.AppendText(progress + Environment.NewLine);
-                }
-            }
-            catch { }
+            Console.WriteLine(progress);
         }
-        internal static void BuildRomFS(string outfile, string infile, RichTextBox TB_Progress = null, ProgressBar PB_Show = null)
+        internal static void BuildRomFS(string outfile, string infile)
         {
             OutFile = outfile;
             ROOT_DIR = infile;
@@ -99,7 +80,7 @@ namespace CTR
             FileNameTable FNT = new FileNameTable(ROOT_DIR);
             RomfsFile[] RomFiles = new RomfsFile[FNT.NumFiles];
             LayoutManager.Input[] In = new LayoutManager.Input[FNT.NumFiles];
-            updateTB(TB_Progress, "Creating Layout...");
+            updateTB("Creating Layout...");
             for (int i = 0; i < FNT.NumFiles; i++)
             {
                 In[i] = new LayoutManager.Input { FilePath = FNT.NameEntryTable[i].FullName, AlignmentSize = 0x10 };
@@ -117,9 +98,9 @@ namespace CTR
             }
             using (MemoryStream memoryStream = new MemoryStream())
             {
-                updateTB(TB_Progress, "Creating RomFS MetaData...");
+                updateTB("Creating RomFS MetaData...");
                 BuildRomFSHeader(memoryStream, RomFiles, ROOT_DIR);
-                MakeRomFSData(RomFiles, memoryStream, TB_Progress, PB_Show);
+                MakeRomFSData(RomFiles, memoryStream);
             }
         }
 
@@ -132,9 +113,9 @@ namespace CTR
             }
             return output;
         }
-        internal static void MakeRomFSData(RomfsFile[] RomFiles, MemoryStream metadata, RichTextBox TB_Progress = null, ProgressBar PB_Show = null)
+        internal static void MakeRomFSData(RomfsFile[] RomFiles, MemoryStream metadata)
         {
-            updateTB(TB_Progress, "Computing IVFC Header Data...");
+            updateTB("Computing IVFC Header Data...");
             IVFCInfo ivfc = new IVFCInfo { Levels = new IVFCLevel[3] };
             for (int i = 0; i < ivfc.Levels.Length; i++)
             {
@@ -173,10 +154,7 @@ namespace CTR
                 byte[] metadataArray = metadata.ToArray();
                 OutFileStream.Write(metadataArray, 0, metadataArray.Length);
                 long baseOfs = OutFileStream.Position;
-                updateTB(TB_Progress, "Writing Level 2 Data...");
-                if (PB_Show.InvokeRequired)
-                    PB_Show.Invoke((MethodInvoker)delegate { PB_Show.Minimum = 0; PB_Show.Step = 1; PB_Show.Value = 0; PB_Show.Maximum = RomFiles.Length; });
-                else { PB_Show.Minimum = 0; PB_Show.Step = 1; PB_Show.Value = 0; PB_Show.Maximum = RomFiles.Length; }
+                updateTB("Writing Level 2 Data...");
 
                 foreach (RomfsFile t in RomFiles)
                 {
@@ -190,9 +168,6 @@ namespace CTR
                             OutFileStream.Write(buffer, 0, buffer.Length);
                         }
                     }
-                    if (PB_Show.InvokeRequired)
-                        PB_Show.Invoke((MethodInvoker)delegate { PB_Show.PerformStep(); });
-                    else { PB_Show.PerformStep(); }
                 }
                 long hashBaseOfs = (long)Align((ulong)OutFileStream.Position, ivfc.Levels[2].BlockSize);
                 long hOfs = (long)Align(MasterHashLen, ivfc.Levels[0].BlockSize);
@@ -200,12 +175,8 @@ namespace CTR
                 SHA256Managed sha = new SHA256Managed();
                 for (int i = ivfc.Levels.Length - 1; i >= 0; i--)
                 {
-                    updateTB(TB_Progress, "Computing Level " + i + " Hashes...");
+                    updateTB("Computing Level " + i + " Hashes...");
                     byte[] buffer = new byte[(int)ivfc.Levels[i].BlockSize];
-
-                    if (PB_Show.InvokeRequired)
-                        PB_Show.Invoke((MethodInvoker)delegate { PB_Show.Minimum = 0; PB_Show.Step = 1; PB_Show.Value = 0; PB_Show.Maximum = (int)(ivfc.Levels[i].DataLength / ivfc.Levels[i].BlockSize); });
-                    else { PB_Show.Minimum = 0; PB_Show.Step = 1; PB_Show.Value = 0; PB_Show.Maximum = (int)(ivfc.Levels[i].DataLength / ivfc.Levels[i].BlockSize); }
 
                     for (long ofs = 0; ofs < (long)ivfc.Levels[i].DataLength; ofs += ivfc.Levels[i].BlockSize)
                     {
@@ -216,9 +187,6 @@ namespace CTR
                         OutFileStream.Seek(cOfs, SeekOrigin.Begin);
                         OutFileStream.Write(hash, 0, hash.Length);
                         cOfs = OutFileStream.Position;
-                        if (PB_Show.InvokeRequired)
-                            PB_Show.Invoke((MethodInvoker)delegate { PB_Show.PerformStep(); });
-                        else { PB_Show.PerformStep(); }
                     }
                     if (i == 2)
                     {
@@ -249,7 +217,7 @@ namespace CTR
                 File.Move(TempFile, OutFile);
             }
         }
-        internal static void WriteBinary(string tempFile, string outFile, RichTextBox TB_Progress = null, ProgressBar PB_Show = null)
+        internal static void WriteBinary(string tempFile, string outFile)
         {
             using (FileStream fs = new FileStream(outFile, FileMode.Create))
             {
@@ -259,10 +227,6 @@ namespace CTR
                     {
                         const uint BUFFER_SIZE = 0x400000; // 4MB Buffer
 
-                        if (PB_Show.InvokeRequired)
-                            PB_Show.Invoke((MethodInvoker)delegate { PB_Show.Minimum = 0; PB_Show.Step = 1; PB_Show.Value = 0; PB_Show.Maximum = (int)(fileStream.Length / BUFFER_SIZE); });
-                        else { PB_Show.Minimum = 0; PB_Show.Step = 1; PB_Show.Value = 0; PB_Show.Maximum = (int)(fileStream.Length / BUFFER_SIZE); }
-
                         byte[] buffer = new byte[BUFFER_SIZE];
                         while (true)
                         {
@@ -270,9 +234,6 @@ namespace CTR
                             if (count != 0)
                             {
                                 writer.Write(buffer, 0, count);
-                                if (PB_Show.InvokeRequired)
-                                    PB_Show.Invoke((MethodInvoker)delegate { PB_Show.PerformStep(); });
-                                else { PB_Show.PerformStep(); }
                             }
                             else
                                 break;
@@ -282,7 +243,7 @@ namespace CTR
                 }
             }
             File.Delete(TempFile);
-            updateTB(TB_Progress, "Wrote RomFS to path:" + Environment.NewLine + outFile);
+            updateTB("Wrote RomFS to path:" + Environment.NewLine + outFile);
         }
         internal static string ByteArrayToString(IEnumerable<byte> input)
         {
@@ -293,9 +254,9 @@ namespace CTR
             return sb.ToString();
         }
 
-        internal static void UpdateTB_Progress(string text, RichTextBox TB_Progress = null)
+        internal static void UpdateTB_Progress(string text)
         {
-            TB_Progress.Text += text + Environment.NewLine;
+            Console.WriteLine(text);
         }
         internal static void BuildRomFSHeader(MemoryStream romfs_stream, RomfsFile[] Entries, string DIR)
         {

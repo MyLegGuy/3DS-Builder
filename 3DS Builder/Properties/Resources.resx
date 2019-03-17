@@ -119,27 +119,27 @@
   </resheader>
   <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
   <data name="Distributed" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\bin\logo\distributed.bin;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>..\Resources\bin\logo\distributed.bin;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="iQue" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\bin\logo\ique.bin;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>..\Resources\bin\logo\ique.bin;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="iQueForSystem" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\bin\logo\iqueforsystem.bin;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>..\Resources\bin\logo\iqueforsystem.bin;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="Licensed" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\bin\logo\licensed.bin;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>..\Resources\bin\logo\licensed.bin;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="Nintendo" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\bin\logo\nintendo.bin;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>..\Resources\bin\logo\nintendo.bin;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="ORAS" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\bin\plainregion\oras.bin;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>..\Resources\bin\plainregion\oras.bin;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="XY" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\bin\plainregion\xy.bin;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>..\Resources\bin\plainregion\xy.bin;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
   <data name="_3dsgames" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\txt\3dsgames.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
+    <value>..\Resources\txt\3dsgames.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
   </data>
 </root>

@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using System.Windows.Forms;
 using _3DS_Builder.Properties;
 
 namespace CTR
@@ -16,8 +15,7 @@ namespace CTR
         // Main wrapper that assembles the ROM based on the following specifications:
         internal static bool buildROM(bool Card2, string LOGO_NAME,
             string EXEFS_PATH, string ROMFS_PATH, string EXHEADER_PATH,
-            string SERIAL_TEXT, string SAVE_PATH
-)
+            string SERIAL_TEXT, string SAVE_PATH)
         {
 
 
@@ -178,8 +176,7 @@ namespace CTR
             //NCSD is Initialized
             return Rom;
         }
-        internal static bool writeROM(NCSD Rom, string SAVE_PATH
-    )
+        internal static bool writeROM(NCSD Rom, string SAVE_PATH)
         {
             NCCH Content = Rom.NCCH_Array[0];
  
