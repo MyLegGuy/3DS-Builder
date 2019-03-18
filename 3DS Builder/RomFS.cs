@@ -9,58 +9,52 @@ namespace CTR
     public class RomFS
     {
         // Get Info
-        public string FileName;
+        //public string FileName;
         public bool isTempFile;
         public byte[] SuperBlockHash;
         public uint SuperBlockLen;
 
-        public RomFS(string fn, string _patchDir)
+        bool useRam;
+        public Stream dataStream;
+
+        public RomFS(string fn, string _patchDir, bool _useRam)
         {
+            useRam = _useRam;
             const uint MEDIA_UNIT_SIZE = 0x200;
-            if (File.Exists(fn))
-            {
-                throw new Exception("Does not work with precompiled romfs");
-                /*
-                FileName = fn;
-                isTempFile = false;
-                using (var fs = File.OpenRead(fn))
-                {
-                    fs.Seek(0x8, SeekOrigin.Begin);
-                    uint mhlen = (uint)(fs.ReadByte() | (fs.ReadByte() << 8) | (fs.ReadByte() << 16) | (fs.ReadByte() << 24));
-                    SuperBlockLen = mhlen + 0x50;
-                    if (SuperBlockLen % MEDIA_UNIT_SIZE != 0)
-                        SuperBlockLen += (MEDIA_UNIT_SIZE - (SuperBlockLen % MEDIA_UNIT_SIZE));
-                    byte[] superblock = new byte[SuperBlockLen];
-                    fs.Seek(0, SeekOrigin.Begin);
-                    fs.Read(superblock, 0, superblock.Length);
-                    using (SHA256 sha = SHA256.Create())
-                    {
-                        SuperBlockHash = sha.ComputeHash(superblock);
-                    }
+            if (File.Exists(fn)){
+                if (_patchDir==null){
+                    Console.WriteLine("Patch dir will be ignored because precompiled romfs is being used.");
                 }
-                */
+                //FileName = fn;
+                isTempFile = false;
+                dataStream = File.OpenRead(fn);
             }
             else
             {
-                FileName = TempFile;
-                isTempFile = true;
-                BuildRomFS(FileName, fn, _patchDir);
-                using (var fs = File.OpenRead(FileName))
-                {
-                    fs.Seek(0x8, SeekOrigin.Begin);
-                    uint mhlen = (uint)(fs.ReadByte() | (fs.ReadByte() << 8) | (fs.ReadByte() << 16) | (fs.ReadByte() << 24));
-                    SuperBlockLen = mhlen + 0x50;
-                    if (SuperBlockLen % MEDIA_UNIT_SIZE != 0)
-                        SuperBlockLen += (MEDIA_UNIT_SIZE - (SuperBlockLen % MEDIA_UNIT_SIZE));
-                    byte[] superblock = new byte[SuperBlockLen];
-                    fs.Seek(0, SeekOrigin.Begin);
-                    fs.Read(superblock, 0, superblock.Length);
-                    using (SHA256 sha = SHA256.Create())
-                    {
-                        SuperBlockHash = sha.ComputeHash(superblock);
-                    }
+                //FileName = TempFile;
+                dataStream = BuildRomFS(_useRam ? null : TempFile, fn, _patchDir);
+                if (_useRam==false){
+                    isTempFile = true;
+                    dataStream = File.OpenRead(TempFile);
                 }
+                //dataStream
+                
             }
+
+            dataStream.Seek(0x8, SeekOrigin.Begin);
+            uint mhlen = (uint)(dataStream.ReadByte() | (dataStream.ReadByte() << 8) | (dataStream.ReadByte() << 16) | (dataStream.ReadByte() << 24));
+            SuperBlockLen = mhlen + 0x50;
+            if (SuperBlockLen % MEDIA_UNIT_SIZE != 0)
+                SuperBlockLen += (MEDIA_UNIT_SIZE - (SuperBlockLen % MEDIA_UNIT_SIZE));
+            byte[] superblock = new byte[SuperBlockLen];
+            dataStream.Seek(0, SeekOrigin.Begin);
+            dataStream.Read(superblock, 0, superblock.Length);
+            using (SHA256 sha = SHA256.Create()){
+                SuperBlockHash = sha.ComputeHash(superblock);
+            }
+
+            dataStream.Seek(0,SeekOrigin.Begin);
+            
         }
 
         // Build
@@ -77,11 +71,13 @@ namespace CTR
         internal static string makePathRelative(string _passedPath, string _passedRoot){
             return _passedPath.Replace(Path.GetFullPath(_passedRoot), "").Replace("\\", "/");
         }
-        internal static void BuildRomFS(string outfile, string infile, string _patchDir)
+        internal static Stream BuildRomFS(string outfile, string infile, string _patchDir)
         {
             OutFile = outfile;
             ROOT_DIR = infile;
-            if (File.Exists(TempFile)) File.Delete(TempFile);
+            if (outfile!=null){
+                if (File.Exists(TempFile)) File.Delete(TempFile);
+            }
 
             FileNameTable FNT = new FileNameTable(ROOT_DIR);
             RomfsFile[] RomFiles = new RomfsFile[FNT.NumFiles];
@@ -124,11 +120,17 @@ namespace CTR
                 };
             }
             
+            Stream _possibleRetStream;
             using (MemoryStream memoryStream = new MemoryStream())
             {
                 updateTB("Creating RomFS MetaData...");
                 BuildRomFSHeader(memoryStream, RomFiles, ROOT_DIR);
-                MakeRomFSData(RomFiles, memoryStream);
+                _possibleRetStream = MakeRomFSData(RomFiles, memoryStream,outfile!=null ? outfile : null);
+            }
+            if (outfile!=null){
+                return null;
+            }else{
+                return _possibleRetStream;
             }
         }
 
@@ -141,7 +143,7 @@ namespace CTR
             }
             return output;
         }
-        internal static void MakeRomFSData(RomfsFile[] RomFiles, MemoryStream metadata)
+        internal static Stream MakeRomFSData(RomfsFile[] RomFiles, MemoryStream metadata, string _writeDest)
         {
             updateTB("Computing IVFC Header Data...");
             IVFCInfo ivfc = new IVFCInfo { Levels = new IVFCLevel[3] };
@@ -162,7 +164,12 @@ namespace CTR
             const uint IVFC_MAGIC = 0x43465649; //IVFC
             const uint RESERVED = 0x0;
             const uint HeaderLen = 0x5C;
-            FileStream OutFileStream = new FileStream(TempFile, FileMode.Create, FileAccess.ReadWrite);
+            Stream OutFileStream;
+            if (_writeDest!=null){
+                OutFileStream = new FileStream(TempFile, FileMode.Create, FileAccess.ReadWrite);
+            }else{
+                OutFileStream = new MemoryStream();
+            }
             try
             {
                 OutFileStream.Seek(0, SeekOrigin.Begin);
@@ -236,13 +243,19 @@ namespace CTR
             }
             finally
             {
-                if (OutFileStream != null)
+                if (OutFileStream != null && _writeDest!=null)
                     OutFileStream.Dispose();
             }
-            if (OutFile != TempFile)
-            {
-                if (File.Exists(OutFile)) File.Delete(OutFile);
-                File.Move(TempFile, OutFile);
+            if (_writeDest!=null){
+                OutFileStream.Dispose();
+                if (_writeDest != TempFile)
+                {
+                    if (File.Exists(OutFile)) File.Delete(OutFile);
+                    File.Move(TempFile, OutFile);
+                }
+                return null;
+            }else{
+                return OutFileStream;
             }
         }
         internal static void WriteBinary(string tempFile, string outFile)

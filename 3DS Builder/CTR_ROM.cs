@@ -15,21 +15,21 @@ namespace CTR
         // Main wrapper that assembles the ROM based on the following specifications:
         internal static bool buildROM(bool Card2, string LOGO_NAME,
             string EXEFS_PATH, string ROMFS_PATH, string EXHEADER_PATH,
-            string SERIAL_TEXT, string SAVE_PATH, string _patchDir)
+            string SERIAL_TEXT, string SAVE_PATH, string _patchDir, bool _useRam)
         {
 
 
             // Sanity check the input files.
             if (!((File.Exists(EXEFS_PATH) || Directory.Exists(EXEFS_PATH)) && (File.Exists(ROMFS_PATH) || Directory.Exists(ROMFS_PATH)) && File.Exists(EXHEADER_PATH))) return false;
 
-            var NCCH = setNCCH(EXEFS_PATH, ROMFS_PATH, EXHEADER_PATH, SERIAL_TEXT, LOGO_NAME, _patchDir);
+            var NCCH = setNCCH(EXEFS_PATH, ROMFS_PATH, EXHEADER_PATH, SERIAL_TEXT, LOGO_NAME, _patchDir,_useRam);
             var NCSD = setNCSD(NCCH, Card2);
             bool success = writeROM(NCSD, SAVE_PATH);
             return success;
         }
 
         // Sub methods that drive the operation
-        internal static NCCH setNCCH(string EXEFS_PATH, string ROMFS_PATH, string EXHEADER_PATH, string TB_Serial, string LOGO_NAME, string _patchDir)
+        internal static NCCH setNCCH(string EXEFS_PATH, string ROMFS_PATH, string EXHEADER_PATH, string TB_Serial, string LOGO_NAME, string _patchDir, bool _useRam)
         {
  
             SHA256Managed sha = new SHA256Managed();
@@ -52,7 +52,7 @@ namespace CTR
             Console.WriteLine("Adding ExeFS...");
             Content.exefs = new ExeFS(EXEFS_PATH);
             Console.WriteLine("Adding RomFS...");
-            Content.romfs = new RomFS(ROMFS_PATH,_patchDir);
+            Content.romfs = new RomFS(ROMFS_PATH,_patchDir,_useRam);
 
             Console.WriteLine( "Adding Logo...");
             Content.logo = (byte[])Resources.ResourceManager.GetObject(LOGO_NAME);
@@ -87,7 +87,7 @@ namespace CTR
             Len += (uint)Content.exefs.Data.Length;
             Len = (uint)Align(Len, 0x1000); //Romfs Start is aligned to 0x1000
             Content.header.RomfsOffset = (uint)(Len / MEDIA_UNIT_SIZE);
-            Content.header.RomfsSize = (uint)((new FileInfo(Content.romfs.FileName)).Length / MEDIA_UNIT_SIZE);
+            Content.header.RomfsSize = (uint)(Content.romfs.dataStream.Length / MEDIA_UNIT_SIZE);
             Content.header.RomfsSuperBlockSize = Content.romfs.SuperBlockLen / MEDIA_UNIT_SIZE;
             Len += Content.header.RomfsSize * MEDIA_UNIT_SIZE;
             Content.header.ExefsHash = Content.exefs.SuperBlockHash;
@@ -212,22 +212,24 @@ namespace CTR
                         case 2: //Romfs
                             Console.WriteLine( "Writing Romfs...");
                             OutFileStream.Seek(0x4000 + Rom.NCCH_Array[0].header.RomfsOffset * MEDIA_UNIT_SIZE, SeekOrigin.Begin);
-                            using (FileStream InFileStream = new FileStream(Rom.NCCH_Array[0].romfs.FileName, FileMode.Open, FileAccess.Read))
+                            
+                            Rom.NCCH_Array[0].romfs.dataStream.Seek(0,SeekOrigin.Begin);
+                            Stream InFileStream = Rom.NCCH_Array[0].romfs.dataStream;
+                            
+                            uint BUFFER_SIZE = 0;
+                            ulong RomfsLen = Rom.NCCH_Array[0].header.RomfsSize * MEDIA_UNIT_SIZE;
+
+                            for (ulong j = 0; j < (RomfsLen); j += BUFFER_SIZE)
                             {
-                                uint BUFFER_SIZE = 0;
-                                ulong RomfsLen = Rom.NCCH_Array[0].header.RomfsSize * MEDIA_UNIT_SIZE;
+                                BUFFER_SIZE = (RomfsLen - j) > 0x400000 ? 0x400000 : (uint)(RomfsLen - j);
+                                byte[] buf = new byte[BUFFER_SIZE];
+                                byte[] outbuf = new byte[BUFFER_SIZE];
+                                InFileStream.Read(buf, 0, (int)BUFFER_SIZE);
+                                aesctr.TransformBlock(buf, 0, (int)BUFFER_SIZE, outbuf, 0);
+                                OutFileStream.Write(outbuf, 0, (int)BUFFER_SIZE);
 
-                                for (ulong j = 0; j < (RomfsLen); j += BUFFER_SIZE)
-                                {
-                                    BUFFER_SIZE = (RomfsLen - j) > 0x400000 ? 0x400000 : (uint)(RomfsLen - j);
-                                    byte[] buf = new byte[BUFFER_SIZE];
-                                    byte[] outbuf = new byte[BUFFER_SIZE];
-                                    InFileStream.Read(buf, 0, (int)BUFFER_SIZE);
-                                    aesctr.TransformBlock(buf, 0, (int)BUFFER_SIZE, outbuf, 0);
-                                    OutFileStream.Write(outbuf, 0, (int)BUFFER_SIZE);
-
-                                }
                             }
+                            
                             break;
                     }
                 }
@@ -255,7 +257,7 @@ namespace CTR
 
             //Delete Temporary Romfs File
             if (Content.romfs.isTempFile)
-                File.Delete(Content.romfs.FileName);
+                File.Delete(RomFS.TempFile);
 
             Console.WriteLine( "Done!");
             return true;

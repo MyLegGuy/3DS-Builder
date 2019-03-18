@@ -36,7 +36,7 @@ namespace _3DS_Builder
         [STAThread]
         static void Main(string[] args)
         {
-        	if (args.Length!=5){
+        	if (args.Length<5){
         		Console.WriteLine("3dsbuilder <exefs precompiled> <romfsdir> <romfs patch or 'NULL'> <exheader> <out file>");
         	}else{
         		//CTR_ROM.buildROM(true, "Nintendo", "/gooddrive/_temp/puyo/exefs.bin", "/gooddrive/_temp/puyo/romfs", "/gooddrive/_temp/puyo/exheader.bin", "CTR-P-XXXX", "/gooddrive/_temp/puyo/outrom");
@@ -46,7 +46,7 @@ namespace _3DS_Builder
                 }else{
                     _possiblePatchDir = removeEndSlash(makePathAbsolute(_possiblePatchDir));
                 }
-        	    CTR_ROM.buildROM(true, "Nintendo", makePathAbsolute(args[0]), removeEndSlash(makePathAbsolute(args[1])), makePathAbsolute(args[3]), "CTR-P-XXXX", makePathAbsolute(args[4]), _possiblePatchDir);
+        	    CTR_ROM.buildROM(true, "Nintendo", makePathAbsolute(args[0]), removeEndSlash(makePathAbsolute(args[1])), makePathAbsolute(args[3]), "CTR-P-XXXX", makePathAbsolute(args[4]), _possiblePatchDir,!(Array.IndexOf(args,"--lowram")!=-1));
         	}
         }
     }
