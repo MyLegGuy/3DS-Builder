@@ -14,11 +14,13 @@ namespace CTR
         public byte[] SuperBlockHash;
         public uint SuperBlockLen;
 
-        public RomFS(string fn)
+        public RomFS(string fn, string _patchDir)
         {
             const uint MEDIA_UNIT_SIZE = 0x200;
             if (File.Exists(fn))
             {
+                throw new Exception("Does not work with precompiled romfs");
+                /*
                 FileName = fn;
                 isTempFile = false;
                 using (var fs = File.OpenRead(fn))
@@ -36,12 +38,13 @@ namespace CTR
                         SuperBlockHash = sha.ComputeHash(superblock);
                     }
                 }
+                */
             }
             else
             {
                 FileName = TempFile;
                 isTempFile = true;
-                BuildRomFS(FileName, fn);
+                BuildRomFS(FileName, fn, _patchDir);
                 using (var fs = File.OpenRead(FileName))
                 {
                     fs.Seek(0x8, SeekOrigin.Begin);
@@ -71,7 +74,10 @@ namespace CTR
         {
             Console.WriteLine(progress);
         }
-        internal static void BuildRomFS(string outfile, string infile)
+        internal static string makePathRelative(string _passedPath, string _passedRoot){
+            return _passedPath.Replace(Path.GetFullPath(_passedRoot), "").Replace("\\", "/");
+        }
+        internal static void BuildRomFS(string outfile, string infile, string _patchDir)
         {
             OutFile = outfile;
             ROOT_DIR = infile;
@@ -85,17 +91,39 @@ namespace CTR
             {
                 In[i] = new LayoutManager.Input { FilePath = FNT.NameEntryTable[i].FullName, AlignmentSize = 0x10 };
             }
+
+            String[] _relativePaths = new String[FNT.NumFiles];
+            for (int i=0;i<_relativePaths.Length;++i){
+                _relativePaths[i] = makePathRelative(In[i].FilePath,ROOT_DIR);
+            }
+
+            if (_patchDir!=null){
+                string[] _altFiles = Directory.GetFiles(_patchDir, "*", SearchOption.AllDirectories);
+                for (int i=0;i<_altFiles.Length;++i){
+                    string _stippedStart = makePathRelative(_altFiles[i],_patchDir);
+                    int j;
+                    for (j=0;j<In.Length;++j){
+                        if (_relativePaths[j]==_stippedStart){
+                            In[j].FilePath = _altFiles[i];
+                            break;
+                        }
+                    }
+                }
+            }
+
             LayoutManager.Output[] Out = LayoutManager.Create(In);
             for (int i = 0; i < Out.Length; i++)
             {
                 RomFiles[i] = new RomfsFile
                 {
                     Offset = Out[i].Offset,
-                    PathName = Out[i].FilePath.Replace(Path.GetFullPath(ROOT_DIR), "").Replace("\\", "/"),
-                    FullName = Out[i].FilePath,
+                    PathName = _relativePaths[i],
+                    FullName = FNT.NameEntryTable[i].FullName,
+                    realFilePath = In[i].FilePath,
                     Size = Out[i].Size
                 };
             }
+            
             using (MemoryStream memoryStream = new MemoryStream())
             {
                 updateTB("Creating RomFS MetaData...");
@@ -159,7 +187,7 @@ namespace CTR
                 foreach (RomfsFile t in RomFiles)
                 {
                     OutFileStream.Seek(baseOfs + (long)t.Offset, SeekOrigin.Begin);
-                    using (FileStream inStream = new FileStream(t.FullName, FileMode.Open, FileAccess.Read))
+                    using (FileStream inStream = new FileStream(t.realFilePath, FileMode.Open, FileAccess.Read))
                     {
                         while (inStream.Position < inStream.Length)
                         {
@@ -695,6 +723,7 @@ namespace CTR
             public ulong Offset;
             public ulong Size;
             public string FullName;
+            public string realFilePath;
 
             public static ulong GetDataBlockLength(RomfsFile[] files, ulong PreData)
             {

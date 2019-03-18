@@ -15,21 +15,21 @@ namespace CTR
         // Main wrapper that assembles the ROM based on the following specifications:
         internal static bool buildROM(bool Card2, string LOGO_NAME,
             string EXEFS_PATH, string ROMFS_PATH, string EXHEADER_PATH,
-            string SERIAL_TEXT, string SAVE_PATH)
+            string SERIAL_TEXT, string SAVE_PATH, string _patchDir)
         {
 
 
             // Sanity check the input files.
             if (!((File.Exists(EXEFS_PATH) || Directory.Exists(EXEFS_PATH)) && (File.Exists(ROMFS_PATH) || Directory.Exists(ROMFS_PATH)) && File.Exists(EXHEADER_PATH))) return false;
 
-            var NCCH = setNCCH(EXEFS_PATH, ROMFS_PATH, EXHEADER_PATH, SERIAL_TEXT, LOGO_NAME);
+            var NCCH = setNCCH(EXEFS_PATH, ROMFS_PATH, EXHEADER_PATH, SERIAL_TEXT, LOGO_NAME, _patchDir);
             var NCSD = setNCSD(NCCH, Card2);
             bool success = writeROM(NCSD, SAVE_PATH);
             return success;
         }
 
         // Sub methods that drive the operation
-        internal static NCCH setNCCH(string EXEFS_PATH, string ROMFS_PATH, string EXHEADER_PATH, string TB_Serial, string LOGO_NAME)
+        internal static NCCH setNCCH(string EXEFS_PATH, string ROMFS_PATH, string EXHEADER_PATH, string TB_Serial, string LOGO_NAME, string _patchDir)
         {
  
             SHA256Managed sha = new SHA256Managed();
@@ -52,7 +52,7 @@ namespace CTR
             Console.WriteLine("Adding ExeFS...");
             Content.exefs = new ExeFS(EXEFS_PATH);
             Console.WriteLine("Adding RomFS...");
-            Content.romfs = new RomFS(ROMFS_PATH);
+            Content.romfs = new RomFS(ROMFS_PATH,_patchDir);
 
             Console.WriteLine( "Adding Logo...");
             Content.logo = (byte[])Resources.ResourceManager.GetObject(LOGO_NAME);
