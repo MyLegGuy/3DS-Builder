@@ -32,7 +32,7 @@ namespace _3DS_Builder
         static void Main(string[] args)
         {
         	if (args.Length<5){
-        		Console.WriteLine("3dsbuilder <exefs precompiled> <romfsdir> <romfs patch or 'NULL'> <exheader> <out file>");
+        		Console.WriteLine("3dsbuilder <exefs precompiled> <romfsdir> <romfs patch or 'NULL'> <exheader> <out file> [--lowram]");
         	}else{
         		//CTR_ROM.buildROM(true, "Nintendo", "/gooddrive/_temp/puyo/exefs.bin", "/gooddrive/_temp/puyo/romfs", "/gooddrive/_temp/puyo/exheader.bin", "CTR-P-XXXX", "/gooddrive/_temp/puyo/outrom");
                 string _possiblePatchDir = args[2];

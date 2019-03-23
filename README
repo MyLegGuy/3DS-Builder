@@ -1,0 +1,9 @@
+3ds rom builder for testing romhacks.
+
+* Command line usage
+* Allows you to have a clean romfs folder and a patch romfs folder, no need to merge them beforehand.
+* Build romfs in ram to save time & disc usage. May not work, depends on romfs size, avalible ram, and how you compile the code. If it doesn't work, append '--lowram' to end of command.
+* No encryption, speeds up build times. Patch from https://github.com/exelix11/3DS-Builder-citra/commit/586bb4edd3efc934dd9267a8ad9c8238ee75591a
+
+Usage:
+Just run it without arguments to see.
