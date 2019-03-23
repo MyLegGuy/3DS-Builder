@@ -17,10 +17,12 @@ namespace CTR
             string EXEFS_PATH, string ROMFS_PATH, string EXHEADER_PATH,
             string SERIAL_TEXT, string SAVE_PATH, string _patchDir, bool _useRam)
         {
-
-
             // Sanity check the input files.
-            if (!((File.Exists(EXEFS_PATH) || Directory.Exists(EXEFS_PATH)) && (File.Exists(ROMFS_PATH) || Directory.Exists(ROMFS_PATH)) && File.Exists(EXHEADER_PATH))) return false;
+            if (!((File.Exists(EXEFS_PATH) || Directory.Exists(EXEFS_PATH)) && (File.Exists(ROMFS_PATH) || Directory.Exists(ROMFS_PATH)) && File.Exists(EXHEADER_PATH))){
+            	Console.WriteLine("input check did not pass.");
+            	Console.WriteLine(EXEFS_PATH+"\n"+ROMFS_PATH+"\n"+EXHEADER_PATH);
+            	return false;
+            }
 
             var NCCH = setNCCH(EXEFS_PATH, ROMFS_PATH, EXHEADER_PATH, SERIAL_TEXT, LOGO_NAME, _patchDir,_useRam);
             var NCSD = setNCSD(NCCH, Card2);
@@ -255,6 +257,8 @@ namespace CTR
                 }
             }
 
+            Content.romfs.dataStream.Dispose();
+            
             //Delete Temporary Romfs File
             if (Content.romfs.isTempFile)
                 File.Delete(RomFS.TempFile);
