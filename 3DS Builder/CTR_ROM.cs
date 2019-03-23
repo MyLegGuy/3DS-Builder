@@ -5,6 +5,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using _3DS_Builder.Properties;
+using _3DS_Builder;
 
 namespace CTR
 {
@@ -188,28 +189,22 @@ namespace CTR
                 OutFileStream.Write(Rom.Data, 0, Rom.Data.Length);
                 Console.WriteLine( "Writing NCCH...");
                 OutFileStream.Write(Rom.NCCH_Array[0].header.Data, 0, Rom.NCCH_Array[0].header.Data.Length); //Write NCCH header
-                //AES time.
-                byte[] key = new byte[0x10]; //Fixed-Crypto key is all zero.
+                //NO AES time.
                 for (int i = 0; i < 3; i++)
                 {
-                    AesCtr aesctr = new AesCtr(key, Rom.NCCH_Array[0].header.ProgramId, ((ulong)(i + 1)) << 56); //CTR is ProgramID, section id<<88
                     switch (i)
                     {
                         case 0: //Exheader + AccessDesc
                             Console.WriteLine( "Writing Exheader...");
                             byte[] inEncExheader = new byte[Rom.NCCH_Array[0].exheader.Data.Length + Rom.NCCH_Array[0].exheader.AccessDescriptor.Length];
-                            byte[] outEncExheader = new byte[Rom.NCCH_Array[0].exheader.Data.Length + Rom.NCCH_Array[0].exheader.AccessDescriptor.Length];
                             Array.Copy(Rom.NCCH_Array[0].exheader.Data, inEncExheader, Rom.NCCH_Array[0].exheader.Data.Length);
                             Array.Copy(Rom.NCCH_Array[0].exheader.AccessDescriptor, 0, inEncExheader, Rom.NCCH_Array[0].exheader.Data.Length, Rom.NCCH_Array[0].exheader.AccessDescriptor.Length);
-                            aesctr.TransformBlock(inEncExheader, 0, inEncExheader.Length, outEncExheader, 0);
-                            OutFileStream.Write(outEncExheader, 0, outEncExheader.Length); // Write Exheader
+                            OutFileStream.Write(inEncExheader, 0, inEncExheader.Length); // Write Exheader
                             break;
                         case 1: //Exefs
                             Console.WriteLine( "Writing Exefs...");
                             OutFileStream.Seek(0x4000 + Rom.NCCH_Array[0].header.ExefsOffset * MEDIA_UNIT_SIZE, SeekOrigin.Begin);
-                            byte[] OutExefs = new byte[Rom.NCCH_Array[0].exefs.Data.Length];
-                            aesctr.TransformBlock(Rom.NCCH_Array[0].exefs.Data, 0, Rom.NCCH_Array[0].exefs.Data.Length, OutExefs, 0);
-                            OutFileStream.Write(OutExefs, 0, OutExefs.Length);
+                            OutFileStream.Write(Rom.NCCH_Array[0].exefs.Data, 0, Rom.NCCH_Array[0].exefs.Data.Length);
                             break;
                         case 2: //Romfs
                             Console.WriteLine( "Writing Romfs...");
@@ -225,11 +220,8 @@ namespace CTR
                             {
                                 BUFFER_SIZE = (RomfsLen - j) > 0x400000 ? 0x400000 : (uint)(RomfsLen - j);
                                 byte[] buf = new byte[BUFFER_SIZE];
-                                byte[] outbuf = new byte[BUFFER_SIZE];
                                 InFileStream.Read(buf, 0, (int)BUFFER_SIZE);
-                                aesctr.TransformBlock(buf, 0, (int)BUFFER_SIZE, outbuf, 0);
-                                OutFileStream.Write(outbuf, 0, (int)BUFFER_SIZE);
-
+                                OutFileStream.Write(buf, 0, (int)BUFFER_SIZE);
                             }
                             
                             break;
