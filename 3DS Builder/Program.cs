@@ -29,7 +29,6 @@ namespace _3DS_Builder
         /// <summary>
         /// The main entry point for the application.
         /// </summary>
-        [STAThread]
         static void Main(string[] args)
         {
         	if (args.Length<5){
